@@ -1,26 +1,20 @@
-name: Update <app-name> Cask
+name: Update Pulse Cask
 
 on:
-  # Schedule workflow to run periodically (e.g., daily at midnight UTC)
-  # schedule:
-  #   - cron: '0 0 * * *'
-  # Allow manual triggering from the GitHub Actions UI
-  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight UTC
+  workflow_dispatch: # Allows manual triggering from GitHub Actions UI
 
 jobs:
   update_cask:
-    # --- Changed Runner ---
-    runs-on: ubuntu-latest # Use Ubuntu runner
+    runs-on: ubuntu-latest
 
-    # !! IMPORTANT: Define env vars for customization !!
     env:
-      APP_NAME: '<app-name>' # The name of your cask file (without .rb)
-      TAP_REPO: '${{ github.repository }}' # Your tap repo (e.g., user/homebrew-my-apps)
-      SOURCE_REPO: '<app-source-repo-owner>/<app-source-repo-name>' # e.g., user/my-cool-app
-      # Optional: Define asset name patterns if they are consistent
-      # ASSET_NAME_PATTERN_INTEL: "MyCoolApp-intel-v{version}.dmg" # Example
-      # ASSET_NAME_PATTERN_ARM: "MyCoolApp-arm-v{version}.dmg"   # Example
-      ASSET_NAME_PATTERN_UNIVERSAL: '<app-release-asset-name>-v{version}.dmg' # Example: MyCoolApp-v{version}.dmg
+      APP_NAME: 'pulse'
+      TAP_REPO: '${{ github.repository }}'
+      SOURCE_REPO: 'YiweiShen/pulse-app'
+      ASSET_NAME_PATTERN_ARM: 'Pulse_aarch64.app.tar.gz'
+      ASSET_NAME_PATTERN_INTEL: 'Pulse_x64.app.tar.gz'
 
     steps:
       - name: Check out Tap Repository
@@ -29,94 +23,93 @@ jobs:
       - name: Get Latest Release Info from Source Repo
         id: get_release
         run: |
-          # Ensure jq is available (usually pre-installed, but good practice to check/install if needed)
-          # sudo apt-get update && sudo apt-get install -y jq # Uncomment if jq isn't found
-
-          # Use GitHub CLI (gh) - pre-installed on runners
           LATEST_RELEASE_INFO=$(gh release view --repo ${{ env.SOURCE_REPO }} --json tagName,assets)
-          echo "Release Info: $LATEST_RELEASE_INFO" # Debugging output
+          echo "Release Info: $LATEST_RELEASE_INFO"
 
-          LATEST_VERSION=$(echo "$LATEST_RELEASE_INFO" | jq -r '.tagName | ltrimstr("v")') # Remove leading 'v' if present
+          LATEST_VERSION=$(echo "$LATEST_RELEASE_INFO" | jq -r '.tagName | ltrimstr("v")')
           echo "Latest Version: $LATEST_VERSION"
 
-          # --- Extract Asset URL and Name ---
-          # Adapt this jq query based on your asset naming convention.
-          # This example assumes a universal asset matching the pattern.
-          ASSET_NAME=$(echo "${{ env.ASSET_NAME_PATTERN_UNIVERSAL }}" | sed "s/{version}/$LATEST_VERSION/g")
-          ASSET_INFO=$(echo "$LATEST_RELEASE_INFO" | jq --arg name "$ASSET_NAME" -r '.assets[] | select(.name == $name)')
+          ARM_ASSET_NAME=$(echo "${{ env.ASSET_NAME_PATTERN_ARM }}")
+          INTEL_ASSET_NAME=$(echo "${{ env.ASSET_NAME_PATTERN_INTEL }}")
 
-          # Optional: Add logic here for separate Intel/ARM builds if needed, querying assets by name pattern
+          ARM_ASSET_INFO=$(echo "$LATEST_RELEASE_INFO" | jq --arg name "$ARM_ASSET_NAME" -r '.assets[] | select(.name == $name)')
+          INTEL_ASSET_INFO=$(echo "$LATEST_RELEASE_INFO" | jq --arg name "$INTEL_ASSET_NAME" -r '.assets[] | select(.name == $name)')
 
-          if [ -z "$ASSET_INFO" ]; then
-            echo "::error::Could not find asset matching pattern '$ASSET_NAME' in release $LATEST_VERSION"
+          if [ -z "$ARM_ASSET_INFO" ] || [ -z "$INTEL_ASSET_INFO" ]; then
+            echo "::error::Could not find both ARM and Intel assets in release $LATEST_VERSION"
             exit 1
           fi
 
-          ASSET_URL=$(echo "$ASSET_INFO" | jq -r '.url')
-          ASSET_FILENAME=$(echo "$ASSET_INFO" | jq -r '.name')
+          ARM_ASSET_URL=$(echo "$ARM_ASSET_INFO" | jq -r '.url')
+          INTEL_ASSET_URL=$(echo "$INTEL_ASSET_INFO" | jq -r '.url')
 
-          echo "Found Asset URL: $ASSET_URL"
-          echo "Found Asset Filename: $ASSET_FILENAME"
+          echo "ARM Asset URL: $ARM_ASSET_URL"
+          echo "Intel Asset URL: $INTEL_ASSET_URL"
 
           echo "latest_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
-          echo "asset_url=${ASSET_URL}" >> $GITHUB_OUTPUT
-          echo "asset_filename=${ASSET_FILENAME}" >> $GITHUB_OUTPUT
+          echo "arm_asset_url=${ARM_ASSET_URL}" >> $GITHUB_OUTPUT
+          echo "intel_asset_url=${INTEL_ASSET_URL}" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the default token
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get Current Cask Version
+      - name: Get Current Cask Version and SHA256
         id: get_cask_version
         run: |
           CURRENT_VERSION=$(grep -E '^\s*version\s+"([0-9.]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          CURRENT_ARM_SHA256=$(grep -E '^\s*sha256\s+arm:\s+"([a-f0-9]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          CURRENT_INTEL_SHA256=$(grep -E '^\s*sha256\s+intel:\s+"([a-f0-9]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+
           echo "Current Cask Version: $CURRENT_VERSION"
+          echo "Current ARM SHA256: $CURRENT_ARM_SHA256"
+          echo "Current Intel SHA256: $CURRENT_INTEL_SHA256"
+
           echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          echo "current_arm_sha256=${CURRENT_ARM_SHA256}" >> $GITHUB_OUTPUT
+          echo "current_intel_sha256=${CURRENT_INTEL_SHA256}" >> $GITHUB_OUTPUT
 
       - name: Compare Versions and Update Cask if Necessary
         if: steps.get_release.outputs.latest_version != steps.get_cask_version.outputs.current_version
         run: |
           echo "New version found: ${{ steps.get_release.outputs.latest_version }}. Updating cask..."
           LATEST_VERSION="${{ steps.get_release.outputs.latest_version }}"
-          ASSET_URL="${{ steps.get_release.outputs.asset_url }}"
-          ASSET_FILENAME="${{ steps.get_release.outputs.asset_filename }}"
+          ARM_ASSET_URL="${{ steps.get_release.outputs.arm_asset_url }}"
+          INTEL_ASSET_URL="${{ steps.get_release.outputs.intel_asset_url }}"
+
           CASK_FILE="Casks/${{ env.APP_NAME }}.rb"
 
-          # Download the asset to calculate checksum
-          echo "Downloading $ASSET_FILENAME from $ASSET_URL..."
-          curl -L -o "$ASSET_FILENAME" "$ASSET_URL"
-          echo "Download complete."
+          # Download and calculate SHA256 for ARM
+          echo "Downloading ARM asset..."
+          curl -L -o "arm_asset.tar.gz" "$ARM_ASSET_URL"
+          ARM_SHA256=$(sha256sum "arm_asset.tar.gz" | awk '{print $1}')
+          rm "arm_asset.tar.gz"
+          echo "ARM SHA256: $ARM_SHA256"
 
-          # --- Calculate SHA256 checksum using Linux utility ---
-          NEW_SHA256=$(sha256sum "$ASSET_FILENAME" | awk '{print $1}')
-          echo "New SHA256: $NEW_SHA256"
+          # Download and calculate SHA256 for Intel
+          echo "Downloading Intel asset..."
+          curl -L -o "intel_asset.tar.gz" "$INTEL_ASSET_URL"
+          INTEL_SHA256=$(sha256sum "intel_asset.tar.gz" | awk '{print $1}')
+          rm "intel_asset.tar.gz"
+          echo "Intel SHA256: $INTEL_SHA256"
 
-          # Clean up downloaded file
-          rm "$ASSET_FILENAME"
-
-          # --- Update the Cask file ---
-          # Using sed (GNU sed on Ubuntu handles -i.bak similarly to macOS sed)
-          # Update version line
+          # Update the Cask file
           sed -i.bak -E "s/^(\s*version\s+\")[^\"]+(\".*)/\1${LATEST_VERSION}\2/" "$CASK_FILE"
-          # Update sha256 line (assuming a single universal sha256)
-          sed -i.bak -E "s/^(\s*sha256\s+\")[^\"]+(\".*)/\1${NEW_SHA256}\2/" "$CASK_FILE"
-          # Optional: Update URL line if needed (e.g., if version isn't interpolated)
-          # sed -i.bak -E "s|^(\s*url\s+\").*(\".*)|\1${ASSET_URL}\2|" "$CASK_FILE" # Be careful if URL uses interpolation
+          sed -i.bak -E "s/^(\s*sha256\s+arm:\s+\")[^\"]+(\".*)/\1${ARM_SHA256}\2/" "$CASK_FILE"
+          sed -i.bak -E "s/^(\s*sha256\s+intel:\s+\")[^\"]+(\".*)/\1${INTEL_SHA256}\2/" "$CASK_FILE"
+          sed -i.bak -E "s|^(\s*url\s+\").*aarch64.*(\".*)|\1${ARM_ASSET_URL}\2|" "$CASK_FILE"
+          sed -i.bak -E "s|^(\s*url\s+\").*x64.*(\".*)|\1${INTEL_ASSET_URL}\2|" "$CASK_FILE"
 
-          # Remove backup files created by sed -i
           rm "${CASK_FILE}.bak"
-
-          # Optional: Add logic here to update separate sha256/url for Intel/ARM if needed
 
           echo "Cask file updated."
 
-          # --- Commit and Push Changes ---
+          # Commit and Push Changes
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
           git add "$CASK_FILE"
           git commit -m "Update ${APP_NAME} cask to v${LATEST_VERSION}"
 
-          # Handle potential race conditions (if another run happened concurrently)
-          git pull --rebase # Pull latest changes before pushing
+          git pull --rebase
           git push
           echo "Changes pushed to repository."
 
