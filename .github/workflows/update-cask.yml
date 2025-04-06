@@ -94,9 +94,15 @@ jobs:
           echo "Intel SHA256: $INTEL_SHA256"
 
           # Update the Cask file
+
+          # Update version
           sed -i.bak -E "s/^(\s*version\s+\")[^\"]+(\".*)/\1${LATEST_VERSION}\2/" "$CASK_FILE"
-          sed -i.bak -E "s/^(.*arm:\s+\")[^\"]+(\".*,)/\1${ARM_SHA256}\2/" "$CASK_FILE"
-          sed -i.bak -E "s/^(.*intel:\s+\")[^\"]+(\".*)/\1${INTEL_SHA256}\2/" "$CASK_FILE"
+
+          # Update sha256 arm
+          sed -i.bak -E "s/^(sha256\s+arm:\s+\")[^\"]+(\",?)/\1${ARM_SHA256}\2/" "$CASK_FILE"
+
+          # Update sha256 intel — match only in the sha256 line
+          sed -i.bak -E "s/^(.*sha256.*intel:\s+\")[^\"]+(\")/\1${INTEL_SHA256}\2/" "$CASK_FILE"
 
           rm "${CASK_FILE}.bak"
 
