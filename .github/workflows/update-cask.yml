@@ -68,6 +68,8 @@ jobs:
           echo "current_intel_sha256=${CURRENT_INTEL_SHA256}" >> $GITHUB_OUTPUT
 
       - name: Compare Versions and Update Cask if Necessary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: steps.get_release.outputs.latest_version != steps.get_cask_version.outputs.current_version
         run: |
           echo "New version found: ${{ steps.get_release.outputs.latest_version }}. Updating cask..."
@@ -100,16 +102,14 @@ jobs:
 
           echo "Cask file updated."
 
-          # Commit and Push Changes
+          # Set up Git user
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
           git add "$CASK_FILE"
-          git commit -m "Update ${APP_NAME} cask to v${LATEST_VERSION}"
-
+          git commit -m "Update ${APP_NAME} cask to v${LATEST_VERSION}" || echo "No changes to commit"
           git pull --rebase
-          git push
-          echo "Changes pushed to repository."
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.ref_name }}
 
       - name: No Update Needed
         if: steps.get_release.outputs.latest_version == steps.get_cask_version.outputs.current_version
