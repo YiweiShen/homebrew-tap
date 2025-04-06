@@ -10,6 +10,11 @@ cask "pulse" do
     desc "A minimalist macOS menubar app for email notifications."
     homepage "https://github.com/YiweiShen/pulse-app"
 
+    livecheck do
+        url :url
+        strategy :github_latest
+    end
+
     auto_updates true
     depends_on macos: ">= :high_sierra"
 
