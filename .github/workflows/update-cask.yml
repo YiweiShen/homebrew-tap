@@ -96,15 +96,9 @@ jobs:
           echo "Intel SHA256: $INTEL_SHA256"
 
           # Update the Cask file
-
-          # Update version
           sed -i.bak -E "s/^(\s*version\s+\")[^\"]+(\".*)/\1${LATEST_VERSION}\2/" "$CASK_FILE"
-
-          # Update sha256 arm
-          sed -i.bak -E "s/^(sha256\s+arm:\s+\")[^\"]+(\",?)/\1${ARM_SHA256}\2/" "$CASK_FILE"
-
-          # Update sha256 intel — match only in the sha256 line
-          sed -i.bak -E "s/^(.*sha256.*intel:\s+\")[^\"]+(\")/\1${INTEL_SHA256}\2/" "$CASK_FILE"
+          sed -i.bak -E "s/${CURRENT_ARM_SHA256}/${ARM_SHA256}/" "$CASK_FILE"
+          sed -i.bak -E "s/${CURRENT_INTEL_SHA256}/${INTEL_SHA256}/" "$CASK_FILE"
 
           rm "${CASK_FILE}.bak"
 
@@ -117,7 +111,7 @@ jobs:
           git config --global user.email "actions@github.com"
 
           git add "$CASK_FILE"
-          git commit -m "Update ${APP_NAME} cask to v${LATEST_VERSION}" || echo "No changes to commit"
+          git commit -m "chore(bot): update ${APP_NAME} cask to v${LATEST_VERSION}" || echo "No changes to commit"
           git pull --rebase
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.ref_name }}
 
