@@ -11,7 +11,7 @@ cask "pulse" do
     homepage "https://github.com/YiweiShen/pulse-app"
 
     livecheck do
-        url :url
+        url :stable
         strategy :github_latest
     end
 
