@@ -56,8 +56,8 @@ jobs:
         id: get_cask_version
         run: |
           CURRENT_VERSION=$(grep -E '^\s*version\s+"([0-9.]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-          CURRENT_ARM_SHA256=$(grep -E '^\s*sha256\s+arm:\s+"([a-f0-9]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-          CURRENT_INTEL_SHA256=$(grep -E '^\s*sha256\s+intel:\s+"([a-f0-9]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          CURRENT_ARM_SHA256=$(grep -E 'arm:\s*"([a-f0-9]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          CURRENT_INTEL_SHA256=$(grep -E 'intel:\s*"([a-f0-9]+)"' Casks/${{ env.APP_NAME }}.rb | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
 
           echo "Current Cask Version: $CURRENT_VERSION"
           echo "Current ARM SHA256: $CURRENT_ARM_SHA256"
