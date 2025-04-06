@@ -93,10 +93,8 @@ jobs:
 
           # Update the Cask file
           sed -i.bak -E "s/^(\s*version\s+\")[^\"]+(\".*)/\1${LATEST_VERSION}\2/" "$CASK_FILE"
-          sed -i.bak -E "s/^(\s*sha256\s+arm:\s+\")[^\"]+(\".*)/\1${ARM_SHA256}\2/" "$CASK_FILE"
-          sed -i.bak -E "s/^(\s*sha256\s+intel:\s+\")[^\"]+(\".*)/\1${INTEL_SHA256}\2/" "$CASK_FILE"
-          sed -i.bak -E "s|^(\s*url\s+\").*aarch64.*(\".*)|\1${ARM_ASSET_URL}\2|" "$CASK_FILE"
-          sed -i.bak -E "s|^(\s*url\s+\").*x64.*(\".*)|\1${INTEL_ASSET_URL}\2|" "$CASK_FILE"
+          sed -i.bak -E "s/^(.*arm:\s+\")[^\"]+(\".*,)/\1${ARM_SHA256}\2/" "$CASK_FILE"
+          sed -i.bak -E "s/^(.*intel:\s+\")[^\"]+(\".*)/\1${INTEL_SHA256}\2/" "$CASK_FILE"
 
           rm "${CASK_FILE}.bak"
 
