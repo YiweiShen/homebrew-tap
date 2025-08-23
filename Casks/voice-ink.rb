@@ -18,6 +18,12 @@ cask "voice-ink" do
 
     app "VoiceInk.app"
 
+    postflight do
+        system_command "/bin/chmod", args: ["+x", "/Applications/VoiceInk.app"], sudo: true
+        system_command "/usr/bin/xattr", args: ["-cr", "/Applications/VoiceInk.app"], sudo: true
+        system_command "/usr/bin/codesign", args: ["--force", "--deep", "--sign", "-", "/Applications/VoiceInk.app"], sudo: true
+    end
+
     zap trash: [
         "~/Library/Application Support/com.yiweishen.VoiceInk",
         "~/Library/Application Support/VoiceInk",
