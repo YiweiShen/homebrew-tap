@@ -1,7 +1,7 @@
 # https://docs.brew.sh/Cask-Cookbook
 cask "voice-ink" do
     version "0.0.1"
-    sha256 "a37d9f297270e998dc16ac7e7fd433f0bc910e7242f9e0c6d2ba0444d011d8f0",
+    sha256 "a37d9f297270e998dc16ac7e7fd433f0bc910e7242f9e0c6d2ba0444d011d8f0"
 
     url "https://github.com/YiweiShen/voice-ink/releases/download/v#{version}/voice-ink.dmg"
     name "voice-ink"
