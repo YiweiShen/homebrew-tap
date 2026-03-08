@@ -1,9 +1,9 @@
 # https://docs.brew.sh/Cask-Cookbook
 cask "pulse" do
-    version "0.1.16"
+    version "0.1.17"
     arch arm: "aarch64", intel: "x64"
-    sha256 arm: "db1d6f4431b00d69b41a0a94284c91bf6a418db8399147b97ffd48fb397b102f",
-        intel: "091c5def75bcea7efe2d13b96b2103f131f16081debdf83496b1054d246a7063"
+    sha256 arm: "b4b4b1a31a8c2e154f34fe1072cae3fc0ad5a0f3c6cf530235768f1ca9694d49",
+        intel: "7cfeb4e506d2bc596e3dda3ed33f55748fc785cb09661721db3572c092517e3e"
 
     url "https://github.com/YiweiShen/pulse-app/releases/download/v#{version}/Pulse_#{arch}.app.tar.gz"
     name "pulse"
